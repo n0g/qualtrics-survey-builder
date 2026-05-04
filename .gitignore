@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.qsf
+*.egg-info/
+dist/
+.DS_Store
