@@ -147,6 +147,26 @@ scale: Never, Sometimes, Often, Always
 - I use the API
 ```
 
+### `[rank]` — Rank Order (Drag and Drop)
+
+Choices are listed as bullet points. Supports `carry-from:` for dynamic choices.
+
+```markdown
+## Rank these concerns from most to least important [rank]
+- Financial loss
+- Physical safety
+- Emotional distress
+```
+
+With carry-forward:
+
+```markdown
+## Rank the threats you identified from most to least concerning [rank]*
+carry-from: QID1
+```
+
+---
+
 ### `[description]` — Descriptive Text (no input)
 
 The heading is the internal label. Any paragraph text after the heading becomes the displayed body content.
@@ -237,6 +257,20 @@ branch-if: QID3/1 Selected
 
 **Question numbering:** QIDs are assigned in order of appearance across all blocks (counting description blocks as questions). QID1 is the first question in the first block, QID2 is the second, and so on.
 
+**Labels:** Instead of counting QIDs manually, add `@label` at the end of any question heading and reference it as `@label` anywhere a `QIDn` is expected. Labels are resolved to the correct QID automatically.
+
+```markdown
+## Who concerns you? [mc-multi]* @threat_actors
+- Scammers
+- Stalkers
+
+# Threat Details
+loop-from: @threat_actors
+
+# Premium
+branch-if: @threat_actors/1 Selected
+```
+
 ---
 
 ## Loop & Merge
@@ -276,6 +310,33 @@ loop-from: QID1
 **Piped text:** `${lm://Field/1}` is replaced at runtime by Qualtrics with the choice label of the current loop iteration. Write it directly in the question text — no extra configuration needed.
 
 **Note:** The source question must be an `[mc-multi]` question. Loop blocks cannot be combined with `branch-if:` in the current implementation.
+
+---
+
+## Carry Forward Choices
+
+`carry-from:` on a question (line immediately after `## Question text [type]`) populates the question's choices dynamically from the selected choices of a prior question. No bullet points are needed — choices are injected at runtime by Qualtrics.
+
+```
+## Question text [type]
+carry-from: QID<n>
+```
+
+```markdown
+# Threats
+## Who are you concerned about? [mc-multi]*
+- Scammers or fraudsters
+- Stalkers or abusive partners
+- Identity thieves
+
+# Appraisal
+## Which of these threats concerns you most? [mc]*
+carry-from: QID1
+```
+
+Only the choices the respondent actually selected in the source question are shown.
+
+**Note:** The source question must be an `[mc-multi]` question.
 
 ---
 
@@ -363,6 +424,34 @@ branch-if: QID3/4 Selected
 - Third-party integrations
 - Data export
 - Other
+```
+
+---
+
+## Choice Text Entry
+
+Add `[+text]` at the end of a choice to enable an inline text field when that choice is selected. Typically used for "Other — please specify" choices on `[mc]` and `[mc-multi]` questions.
+
+```
+- Choice text [+text]
+```
+
+Can be combined with `[VARNAME=N]`:
+
+```markdown
+## What is your gender? [mc]*
+- Man
+- Woman
+- Non-binary
+- Prefer to self-describe [+text]
+- Prefer not to say
+```
+
+```markdown
+## Which platform do you use? [mc-multi]
+- iOS
+- Android
+- Other [OTHER][+text]
 ```
 
 ---

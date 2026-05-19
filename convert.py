@@ -57,6 +57,7 @@ QUESTION_TYPES: dict[str, tuple[str, str, str | None]] = {
     "mc":           ("MC",     "SAVR",  "TX"),
     "mc-multi":     ("MC",     "MAVR",  "TX"),
     "mc-dropdown":  ("MC",     "DL",    "TX"),
+    "rank":         ("RO",     "DND",   "TX"),
     "text":         ("TE",     "SL",    None),
     "text-essay":   ("TE",     "ESTB",  None),
     "matrix":       ("Matrix", "Likert", "SingleAnswer"),
@@ -64,21 +65,25 @@ QUESTION_TYPES: dict[str, tuple[str, str, str | None]] = {
     "description":  ("DB",     "TB",    None),
 }
 
-# ## Question text [type] or ## Question text [type]*
-_QUESTION_RE = re.compile(r"^##\s+(.+?)\s+\[([^\]]+)\]\s*(\*)?\s*$")
+# ## Question text [type] or ## Question text [type]* or ## Question text [type]* @label
+_QUESTION_RE = re.compile(r"^##\s+(.+?)\s+\[([^\]]+)\]\s*(\*)?\s*(?:@(\w+))?\s*$")
 
-# branch-if: QID2/1 Selected  — wraps block in a Branch flow element
+# branch-if: QID2/1 Selected or branch-if: @label/1 Selected
 # show-if:   QID2/1 Selected  — on block: DisplayLogic on all questions; on question: DisplayLogic on that question
-_LOGIC_COND_RE = re.compile(r"(QID\d+)/(\d+)\s+(\w+)", re.IGNORECASE)
+_LOGIC_COND_RE = re.compile(r"(@\w+|QID\d+)/(\d+)\s+(\w+)", re.IGNORECASE)
 
-# skip-if: 1 Selected → ENDOFBLOCK  (→ or > accepted)
+# skip-if: 1 Selected → ENDOFBLOCK  (→ or > accepted; destination may be QIDn, @label, ENDOFBLOCK, ENDOFSURVEY)
 _SKIP_IF_RE = re.compile(r"(\d+)\s+(\w+)\s+[→>]\s+(\S+)", re.IGNORECASE)
 
-# loop-from: QID13  — Loop & Merge block driven by selected choices of source question
-_LOOP_FROM_RE = re.compile(r"(QID\d+)", re.IGNORECASE)
+# loop-from: QID13 or loop-from: @label
+# carry-from: QID13 or carry-from: @label
+_LOOP_FROM_RE = re.compile(r"(@\w+|QID\d+)", re.IGNORECASE)
 
 # [VARNAME] or [VARNAME=N] on a choice/row bullet — variable naming and recode values
 _CHOICE_ANNOTATION_RE = re.compile(r'^(.*?)\s*\[([A-Z_][A-Z0-9_]*)(?:=(\d+))?\]\s*$')
+
+# [+text] on a choice bullet — enables inline text entry field for that choice
+_TEXT_ENTRY_RE = re.compile(r'\s*\[\+text\]\s*', re.IGNORECASE)
 
 # lang-XX: or lang-XX-scale: for translations
 _LANG_LINE_RE = re.compile(r'^lang-([a-z]{2})(?:-(scale))?:\s*(.+)$', re.IGNORECASE)
@@ -87,7 +92,9 @@ _LANG_LINE_RE = re.compile(r'^lang-([a-z]{2})(?:-(scale))?:\s*(.+)$', re.IGNOREC
 def _parse_logic_condition(line: str) -> dict | None:
     m = _LOGIC_COND_RE.search(line)
     if m:
-        return {"qid": m.group(1), "choice": int(m.group(2)), "operator": m.group(3)}
+        raw = m.group(1)
+        qid = raw if raw.startswith("@") else raw.upper()
+        return {"qid": qid, "choice": int(m.group(2)), "operator": m.group(3)}
     return None
 
 
@@ -111,6 +118,9 @@ def _empty_question(text: str, qtype: str, required: bool) -> dict:
         "display_logic": None,   # {qid, choice, operator}
         "recode_values": {},     # {1-based choice idx → recode value string}
         "variable_names": {},    # {1-based choice idx → variable name string}
+        "text_entry_choices": set(),  # 1-based indices of choices with inline text entry
+        "carry_from": None,          # QID string to carry forward selected choices from
+        "label": None,               # @label defined on this question for cross-references
         "text_translations": {}, # {lang_code → translated question text}
         "choice_translations": {},  # {lang_code → {1-based idx → text}}
         "row_translations": {},     # {lang_code → {1-based idx → text}}
@@ -208,7 +218,16 @@ def parse_survey(text: str) -> dict:
         if stripped.lower().startswith("loop-from:"):
             m = _LOOP_FROM_RE.search(stripped)
             if m is not None and current_block is not None and current_question is None:
-                current_block["loop_from"] = m.group(1).upper()
+                raw = m.group(1)
+                current_block["loop_from"] = raw if raw.startswith("@") else raw.upper()
+            continue
+
+        # carry-from: carry forward selected choices from source question into this MC question
+        if stripped.lower().startswith("carry-from:"):
+            m = _LOOP_FROM_RE.search(stripped)
+            if m is not None and current_question is not None:
+                raw = m.group(1)
+                current_question["carry_from"] = raw if raw.startswith("@") else raw.upper()
             continue
 
         # show-if: DisplayLogic on block (all questions) or on single question
@@ -238,6 +257,8 @@ def parse_survey(text: str) -> dict:
                 qtype=m.group(2).strip(),
                 required=m.group(3) == "*",
             )
+            if m.group(4):
+                current_question["label"] = m.group(4)
             _last_item_type = "question_text"
             continue
 
@@ -278,9 +299,13 @@ def parse_survey(text: str) -> dict:
                     current_question["row_translations"].setdefault(lang, {})[item_idx] = text
             continue
 
-        # bullet → choice or matrix row (with optional [VARNAME=N] annotation)
+        # bullet → choice or matrix row (with optional [VARNAME=N] and/or [+text] annotations)
         if stripped.startswith("- "):
             value = stripped[2:].strip()
+            # Strip [+text] before other annotation parsing
+            has_text_entry = bool(_TEXT_ENTRY_RE.search(value))
+            if has_text_entry:
+                value = _TEXT_ENTRY_RE.sub("", value).strip()
             ann = _CHOICE_ANNOTATION_RE.match(value)
             if ann:
                 value = ann.group(1).strip()
@@ -300,6 +325,8 @@ def parse_survey(text: str) -> dict:
                 current_question["variable_names"][item_idx] = varname
             if recode is not None:
                 current_question["recode_values"][item_idx] = recode
+            if has_text_entry:
+                current_question["text_entry_choices"].add(item_idx)
             continue
 
         # Body text for [description] questions (all remaining content)
@@ -320,8 +347,8 @@ def parse_survey(text: str) -> dict:
 
 def _validate_question(q: dict) -> None:
     qtype = q["type"]
-    if qtype.startswith("mc") and not q["choices"]:
-        print(f"  Warning: MC question has no choices: \"{q['text'][:60]}\"", file=sys.stderr)
+    if qtype in ("mc", "mc-multi", "mc-dropdown", "rank") and not q["choices"] and not q.get("carry_from"):
+        print(f"  Warning: question has no choices: \"{q['text'][:60]}\"", file=sys.stderr)
     if qtype.startswith("matrix"):
         if not q["rows"]:
             print(f"  Warning: Matrix question has no rows: \"{q['text'][:60]}\"", file=sys.stderr)
@@ -514,12 +541,31 @@ def _build_question_payload(
     if sub is not None:
         payload["SubSelector"] = sub
 
-    if qt == "MC":
-        choices = q.get("choices", [])
-        payload["Choices"] = {str(i + 1): {"Display": c} for i, c in enumerate(choices)}
-        payload["ChoiceOrder"] = [str(i + 1) for i in range(len(choices))]
-        payload["NextChoiceId"] = len(choices) + 1
-        payload["DynamicChoicesData"] = []
+    if qt in ("MC", "RO"):
+        carry_from = q.get("carry_from")
+        if carry_from:
+            payload["Choices"] = []
+            payload["ChoiceOrder"] = []
+            payload["NextChoiceId"] = 1
+            payload["DynamicChoices"] = {
+                "DynamicType": "ChoiceGroup",
+                "Locator": f"q://{carry_from}/ChoiceGroup/SelectedChoices",
+                "Type": "Dynamic",
+            }
+            payload["DynamicChoicesData"] = []
+        else:
+            choices = q.get("choices", [])
+            text_entry = q.get("text_entry_choices", set())
+            choice_dict: dict = {}
+            for i, c in enumerate(choices):
+                entry: dict = {"Display": c}
+                if (i + 1) in text_entry:
+                    entry["TextEntry"] = "true"
+                choice_dict[str(i + 1)] = entry
+            payload["Choices"] = choice_dict
+            payload["ChoiceOrder"] = [str(i + 1) for i in range(len(choices))]
+            payload["NextChoiceId"] = len(choices) + 1
+            payload["DynamicChoicesData"] = []
 
     if qt == "TE":
         payload["SearchSource"] = {"AllowFreeResponse": "false"}
@@ -619,6 +665,43 @@ def build_qsf(survey: dict) -> dict:
             "loop_from": block.get("loop_from"),        # None → not a loop block
         })
         all_question_triples.extend(block_triples)
+
+    # Build label → QID map for @label references
+    label_to_qid: dict[str, str] = {}
+    for n, q, _ in all_question_triples:
+        if q.get("label"):
+            label_to_qid[q["label"]] = f"QID{n}"
+
+    def _resolve(ref: str) -> str:
+        """Resolve @label → QIDn, or return QIDn / special destination unchanged."""
+        if ref.startswith("@"):
+            label = ref[1:]
+            resolved = label_to_qid.get(label)
+            if resolved is None:
+                print(f"  Warning: unresolved label @{label}", file=sys.stderr)
+                return ref
+            return resolved
+        return ref
+
+    # Resolve @label references in all parsed structures
+    for _, q, _ in all_question_triples:
+        if q.get("carry_from"):
+            q["carry_from"] = _resolve(q["carry_from"])
+        if q.get("display_logic"):
+            q["display_logic"]["qid"] = _resolve(q["display_logic"]["qid"])
+        for sl in q.get("skip_logic", []):
+            sl["destination"] = _resolve(sl["destination"])
+    for block, bd in zip(survey["blocks"], blocks_data):
+        if block.get("loop_from"):
+            resolved = _resolve(block["loop_from"])
+            block["loop_from"] = resolved
+            bd["loop_from"] = resolved
+        if block.get("branch_logic"):
+            block["branch_logic"]["qid"] = _resolve(block["branch_logic"]["qid"])
+            bd["branch_logic"] = block["branch_logic"]
+        if block.get("display_logic"):
+            block["display_logic"]["qid"] = _resolve(block["display_logic"]["qid"])
+            bd["display_logic"] = block["display_logic"]
 
     # Lookup from QID string to question dict, used when building loop block Options
     qid_to_question = {f"QID{n}": q for n, q, _ in all_question_triples}

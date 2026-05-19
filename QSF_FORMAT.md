@@ -233,6 +233,51 @@ Contains the following element types identified by the `Element` field. Each ele
 - `Language` is an empty array for single-language surveys ✅
 - No `DefaultChoices` field ✅
 
+### Carry Forward Choices ✅
+
+Add `DynamicChoices` to the SQ payload to populate choices at runtime from the selected choices of a prior question. `Choices` and `ChoiceOrder` must be empty arrays.
+
+```json
+{
+  "Choices": [],
+  "ChoiceOrder": [],
+  "DynamicChoices": {
+    "DynamicType": "ChoiceGroup",
+    "Locator": "q://QID13/ChoiceGroup/SelectedChoices",
+    "Type": "Dynamic"
+  },
+  "DynamicChoicesData": []
+}
+```
+
+- `Locator` format: `q://QIDn/ChoiceGroup/SelectedChoices` ✅
+- `DynamicType` is `"ChoiceGroup"` ✅
+- `Type` is `"Dynamic"` ✅
+- `Choices` and `ChoiceOrder` are empty arrays, not omitted ✅
+- `DynamicChoicesData` is an empty array ✅
+
+---
+
+### Choice Text Entry ⚠️
+
+Adding `"TextEntry": "true"` to a choice entry enables an inline text field when that choice is selected (the "Other — please specify" pattern).
+
+```json
+{
+  "Choices": {
+    "1": {"Display": "Yes"},
+    "2": {"Display": "No"},
+    "3": {"Display": "Other", "TextEntry": "true"}
+  }
+}
+```
+
+- Only valid on `MC` questions (`SAVR`, `MAVR`, `DL`) ⚠️
+- `"TextEntry"` is a string `"true"`, not a JSON boolean ⚠️
+- No `"TextEntrySize"` field required (Qualtrics defaults to small) ⚠️
+
+---
+
 ### RecodeValues and VariableNaming ✅
 
 Optional fields added to the SQ payload after `QuestionID` when set on choices:
@@ -292,6 +337,7 @@ When any translations are present, the SO element gains additional fields ✅:
 | `text-essay` | `TE` | `ESTB` | — ⚠️ |
 | `matrix` | `Matrix` | `Likert` | `SingleAnswer` |
 | `matrix-multi` | `Matrix` | `Likert` | `MultipleAnswer` |
+| `rank` | `RO` | `DND` | `TX` |
 | `description` | `DB` | `TB` | — |
 
 **Selector codes:**
@@ -305,6 +351,7 @@ When any translations are present, the SO element gains additional fields ✅:
 - `Likert` = Matrix/Likert selector ✅
 - `TB` = Text / Descriptive block ✅
 - `TX` = Sub-selector for text responses ✅
+- `DND` = Drag and Drop (rank order) ✅
 
 ### Matrix Question Payload ✅
 

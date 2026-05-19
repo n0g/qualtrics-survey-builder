@@ -35,9 +35,12 @@ python convert.py your_survey.md -o output.qsf
 | Skip logic | `skip-if: N Condition → Destination` |
 | Branch flow | `branch-if: QIDn/choice Operator` |
 | Display logic | `show-if: QIDn/choice Operator` |
-| Loop & Merge | `loop-from: QIDn` |
+| Question labels | `## Question [type] @label` |
+| Loop & Merge | `loop-from: QIDn` or `loop-from: @label` |
+| Carry forward choices | `carry-from: QIDn` |
 | Choice recode value | `- Choice text [VARNAME=N]` |
 | Choice variable name | `- Choice text [VARNAME]` |
+| Choice text entry | `- Choice text [+text]` |
 | Translations | `lang-XX:` lines + `languages: [XX]` frontmatter |
 
 ## Supported question types
@@ -51,6 +54,7 @@ python convert.py your_survey.md -o output.qsf
 | `[text-essay]` | Multi-line / essay text entry |
 | `[matrix]` | Matrix / Likert scale (single answer per row) |
 | `[matrix-multi]` | Matrix (multiple answers per row) |
+| `[rank]` | Rank order (drag and drop) |
 | `[description]` | Descriptive text block with body text (no input) |
 
 Add `*` after the type to make a question required: `[mc]*`
