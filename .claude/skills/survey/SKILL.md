@@ -22,6 +22,10 @@ $ARGUMENTS
    ```bash
    source .venv/bin/activate && python convert.py your_survey.md
    ```
+5. Regenerate the flow diagram:
+   ```bash
+   source .venv/bin/activate && python visualize.py your_survey.md
+   ```
 
 ## Key syntax rules
 

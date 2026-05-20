@@ -42,6 +42,13 @@ python convert.py your_survey.md -o output.qsf
 
 Then in Qualtrics: **Create Project → Import a QSF File**.
 
+To generate a PDF flow diagram of the survey structure:
+
+```bash
+python visualize.py your_survey.md
+# → produces your_survey.pdf
+```
+
 See [SURVEY_SPEC.md](SURVEY_SPEC.md) for the markdown format and [example.md](example.md) for a complete example.
 
 ## Documentation
