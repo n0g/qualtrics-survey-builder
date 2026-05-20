@@ -504,7 +504,7 @@ def _build_question_payload(
     display_logic: dict | None = None,
 ) -> dict:
     qid = f"QID{qid_num}"
-    tag = f"Q{qid_num}"
+    tag = q["label"] if q.get("label") else f"Q{qid_num}"
     qtype = q["type"]
     required: bool = q.get("required", False)
 
