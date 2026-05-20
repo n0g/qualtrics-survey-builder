@@ -26,13 +26,15 @@ $ARGUMENTS
    ```bash
    source .venv/bin/activate && python src/visualize.py your_survey.md
    ```
-6. Elicit the behavioral model by asking the user these questions in one message:
+6. Ask the user: "Would you like me to generate a synthetic dataset for this survey? This is useful for validating your analysis pipeline before data collection." If yes, generate a `generate_synthetic.py` script next to the survey `.md` file following the CSV export format documented at the bottom of this skill. Use uniform/random distributions unless the user provides a behavioral model (see step 7).
+
+7. Elicit the behavioral model by asking the user these questions in one message:
    - What is the expected % split across screener branches (e.g. current / former / non-adopter)?
    - For each `[mc-multi]` question, how many choices do you expect the average respondent to select?
    - For each `[matrix]` scale, what is the expected mean response and which groups (if any) do you expect to score higher or lower?
    - Are there directional hypotheses linking constructs (e.g. "higher threat severity → higher adoption intent")?
    - Any other prior assumptions about the data (e.g. floor/ceiling effects, expected dropout points)?
-7. Once the user answers, write their responses to `behavioral_model.yaml` next to the survey `.md` file using this structure:
+8. Once the user answers, write their responses to `behavioral_model.yaml` next to the survey `.md` file using this structure:
    ```yaml
    # Behavioral model — pre-registration priors
    # Generated from survey: <survey filename>
