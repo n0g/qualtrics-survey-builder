@@ -20,11 +20,11 @@ $ARGUMENTS
 3. Make the requested changes to the survey `.md` file.
 4. Run the converter and fix any warnings before reporting back:
    ```bash
-   source .venv/bin/activate && python convert.py your_survey.md
+   source .venv/bin/activate && python src/convert.py your_survey.md
    ```
 5. Regenerate the flow diagram:
    ```bash
-   source .venv/bin/activate && python visualize.py your_survey.md
+   source .venv/bin/activate && python src/visualize.py your_survey.md
    ```
 
 ## Key syntax rules
