@@ -4,7 +4,7 @@ Build Qualtrics surveys from a plain Markdown file and import the result directl
 
 ## Using with Claude Code
 
-The easiest way to create a survey is with [Claude Code](https://claude.ai/code). Clone the repo, open it in Claude Code, and type `/survey` to activate the built-in skill. Claude will read and edit your `.md` file, run the converter, and fix any warnings before reporting back.
+The easiest way to create a survey is with [Claude Code](https://claude.ai/code). Clone the repo, open it in Claude Code, and just describe what you want — Claude will recognize the context and help you automatically.
 
 ```bash
 git clone https://github.com/n0g/qualtrics-survey-builder.git
@@ -13,7 +13,7 @@ pip install -r requirements.txt
 claude
 ```
 
-Then type `/survey` and describe what you want:
+Then describe what you want in plain language:
 
 > Create a screener that routes current users, former users, and non-users into separate blocks
 
@@ -21,7 +21,7 @@ Then type `/survey` and describe what you want:
 
 > Add a 7-point Likert matrix measuring response efficacy with one reversed item
 
-Claude writes the markdown, runs `python convert.py`, and produces a `.qsf` ready to import.
+Claude writes the markdown, runs `python convert.py`, regenerates the flow diagram, and produces a `.qsf` ready to import.
 
 See [SURVEY_SPEC.md](SURVEY_SPEC.md) for the full markdown syntax reference.
 
