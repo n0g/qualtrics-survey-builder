@@ -26,6 +26,36 @@ $ARGUMENTS
    ```bash
    source .venv/bin/activate && python src/visualize.py your_survey.md
    ```
+6. Elicit the behavioral model by asking the user these questions in one message:
+   - What is the expected % split across screener branches (e.g. current / former / non-adopter)?
+   - For each `[mc-multi]` question, how many choices do you expect the average respondent to select?
+   - For each `[matrix]` scale, what is the expected mean response and which groups (if any) do you expect to score higher or lower?
+   - Are there directional hypotheses linking constructs (e.g. "higher threat severity → higher adoption intent")?
+   - Any other prior assumptions about the data (e.g. floor/ceiling effects, expected dropout points)?
+7. Once the user answers, write their responses to `behavioral_model.yaml` next to the survey `.md` file using this structure:
+   ```yaml
+   # Behavioral model — pre-registration priors
+   # Generated from survey: <survey filename>
+
+   branches:
+     <branch_name>: <expected proportion, e.g. 0.40>
+
+   multi_select:
+     <question_label>:
+       mean_selections: <number>
+       most_common: [<choice>, ...]
+
+   scales:
+     <question_label>:
+       expected_mean: <1–7>
+       group_differences: "<free text hypothesis>"
+
+   hypotheses:
+     - "<directional hypothesis>"
+
+   notes: "<anything else>"
+   ```
+   Leave any field blank rather than inventing values the user did not provide.
 
 ## Key syntax rules
 
