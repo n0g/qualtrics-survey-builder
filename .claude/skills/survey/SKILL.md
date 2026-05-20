@@ -1,16 +1,27 @@
+---
+description: Create and edit Qualtrics surveys using the markdown spec and converter. Use when the user wants to build, modify, or convert a survey.
+allowed-tools:
+  - Bash
+  - Read
+  - Edit
+  - Write
+---
+
 # Qualtrics Survey Assistant
 
 You are helping the user create or edit a Qualtrics survey using the markdown-to-QSF converter in this repository. The converter (`convert.py`) takes a `.md` file and produces a `.qsf` file ready to import into Qualtrics via **Create Project → Import a QSF File**.
 
+$ARGUMENTS
+
 ## Your workflow
 
-1. Read `SURVEY_SPEC.md` for the full markdown syntax reference.
-2. Read or create the survey `.md` file the user is working on.
-3. Make edits, then run the converter to verify it produces no warnings:
+1. Identify the survey file to work on — check for `.md` files in the project (excluding README, SURVEY_SPEC, QSF_FORMAT, and example files).
+2. Read `SURVEY_SPEC.md` for the full markdown syntax reference before making any edits.
+3. Make the requested changes to the survey `.md` file.
+4. Run the converter and fix any warnings before reporting back:
+   ```bash
+   source .venv/bin/activate && python convert.py your_survey.md
    ```
-   python convert.py your_survey.md
-   ```
-4. Report any warnings and fix them before presenting the result.
 
 ## Key syntax rules
 
@@ -19,7 +30,7 @@ You are helping the user create or edit a Qualtrics survey using the markdown-to
 ## Question text [type]* @label
 ```
 - `*` makes it required
-- `@label` lets other directives reference this question by name instead of QIDn
+- `@label` lets other directives reference this question by name instead of counting QIDs manually
 
 **Block heading:**
 ```
@@ -75,11 +86,9 @@ skip-if: 1 Selected → ENDOFBLOCK
 branch-if: @subscribed/1 Selected
 ```
 
-Labels are resolved to the correct QID at build time. The converter warns on unresolved labels.
-
 ## Loop & Merge
 
-The loop block repeats once per selected choice in the source question. Use `${lm://Field/1}` to pipe the current choice label into question text.
+Repeats once per selected choice in the source question. Use `${lm://Field/1}` to pipe the current choice label into question text.
 
 ```markdown
 ## Who concerns you? [mc-multi]* @threat_actors
@@ -96,8 +105,6 @@ loop-from: @threat_actors
 
 ## Carry forward + Rank
 
-Show only choices the respondent selected in a prior question:
-
 ```markdown
 ## Which concerns you most? [mc]*
 carry-from: @threat_actors
@@ -106,40 +113,8 @@ carry-from: @threat_actors
 carry-from: @threat_actors
 ```
 
-## Common patterns
+## Current limitations
 
-**Branching screener:**
-```markdown
-# Screener
-## Have you used X? [mc]* @used_x
-- Yes
-- No
-skip-if: 2 Selected → ENDOFSURVEY
-
-# Users Only
-branch-if: @used_x/1 Selected
-
-## How long have you used X? [mc]
-- Less than 1 year
-- More than 1 year
-```
-
-**Matrix with reversed item:**
-```markdown
-## Rate the following [matrix]
-scale: Strongly Disagree, Neutral, Strongly Agree
-- The service works well
-- The service is hard to use <!-- REVERSED ITEM -->
-```
-
-**"Other — please specify":**
-```markdown
-- Other [+text]
-```
-
-## What the converter cannot do yet
-
-- AND/OR compound conditions in branch/display/skip logic (single condition only)
-- Choice randomization
-- Loop blocks combined with `branch-if:`
-- Scoring
+- Single condition only in branch/display/skip logic (no AND/OR)
+- Loop blocks cannot be combined with `branch-if:`
+- No choice randomization or scoring
