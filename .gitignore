@@ -6,3 +6,12 @@ __pycache__/
 dist/
 .DS_Store
 QSF Format Examples/
+
+# Survey-specific files (not part of the builder)
+*.md
+!README.md
+!docs/*.md
+generate_synthetic.py
+*.csv
+*.svg
+*.tex
